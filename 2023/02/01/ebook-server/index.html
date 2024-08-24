@@ -1,0 +1,550 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  
+  <title>openwrt+docker+calibre:搭建家庭电子书库服务器 | ME!ME!ME!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+  
+  <meta name="keywords" content="openwrtdockercalibre" />
+  
+  
+  
+  
+  <meta name="description" content="前些天发现家里的软路由R2S里面openwrt系统里面预装了一个docker，于是突发奇想：能不能用R2S里面多余的存储空间搭建一个Calibre-web用来实现家庭内部的电子书数据库？说干就干，跟着网上的资料，经过两个小时的鏖战，最后我这个完全没接触过docker的纯菜鸟终于也完成这个应用的搭建。">
+<meta property="og:type" content="article">
+<meta property="og:title" content="openwrt+docker+calibre:搭建家庭电子书库服务器">
+<meta property="og:url" content="https://ppp0yang.github.io/2023/02/01/ebook-server/index.html">
+<meta property="og:site_name" content="ME!ME!ME!">
+<meta property="og:description" content="前些天发现家里的软路由R2S里面openwrt系统里面预装了一个docker，于是突发奇想：能不能用R2S里面多余的存储空间搭建一个Calibre-web用来实现家庭内部的电子书数据库？说干就干，跟着网上的资料，经过两个小时的鏖战，最后我这个完全没接触过docker的纯菜鸟终于也完成这个应用的搭建。">
+<meta property="og:locale" content="zh_CN">
+<meta property="og:image" content="https://ppp0yang.github.io/2023/02/01/img/ebook-server/cover.png">
+<meta property="article:published_time" content="2023-02-01T09:22:03.472Z">
+<meta property="article:modified_time" content="2024-08-24T02:19:10.920Z">
+<meta property="article:author" content="Fish Fish">
+<meta property="article:tag" content="openwrt">
+<meta property="article:tag" content="docker">
+<meta property="article:tag" content="calibre">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:image" content="https://ppp0yang.github.io/2023/02/01/img/ebook-server/cover.png">
+  
+    <link rel="alternate" href="/atom.xml" title="ME!ME!ME!" type="application/atom+xml">
+  
+  <link rel="icon" href="/css/images/favicon.ico">
+  
+  <link href="https://fonts.googleapis.com/css?family=Open+Sans|Montserrat:700" rel="stylesheet" type="text/css">
+  <link href="https://fonts.googleapis.com/css?family=Roboto:400,300,300italic,400italic" rel="stylesheet" type="text/css">
+  <link href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.min.css" rel="stylesheet">
+  <style type="text/css">
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/9749f0/00000000000000000001008f/27/l?subset_id=2&fvd=n5) format("woff2");font-weight:500;font-style:normal;}
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/90cf9f/000000000000000000010091/27/l?subset_id=2&fvd=n7) format("woff2");font-weight:500;font-style:normal;}
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/8a5494/000000000000000000013365/27/l?subset_id=2&fvd=n4) format("woff2");font-weight:lighter;font-style:normal;}
+    @font-face{font-family:futura-pt;src:url(https://use.typekit.net/af/d337d8/000000000000000000010095/27/l?subset_id=2&fvd=i4) format("woff2");font-weight:400;font-style:italic;}</style>
+    
+  <link rel="stylesheet" id="athemes-headings-fonts-css" href="//fonts.googleapis.com/css?family=Yanone+Kaffeesatz%3A200%2C300%2C400%2C700&amp;ver=4.6.1" type="text/css" media="all">
+
+  <link rel="stylesheet" id="athemes-headings-fonts-css" href="//fonts.googleapis.com/css?family=Oswald%3A300%2C400%2C700&amp;ver=4.6.1" type="text/css" media="all">
+  
+<link rel="stylesheet" href="/css/style.css">
+
+
+  
+<script src="/js/jquery-3.1.1.min.js"></script>
+
+
+  <!-- Bootstrap core CSS -->
+  <link rel="stylesheet" href="/css/bootstrap.css" >
+  <link rel="stylesheet" href="/css/fashion.css" >
+  <link rel="stylesheet" href="/css/glyphs.css" >
+
+<meta name="generator" content="Hexo 7.3.0"></head>
+
+
+
+  <body data-spy="scroll" data-target="#toc" data-offset="50">
+
+
+  
+  
+  <div class="site-header-image">
+    <img id="originBg" width="100%" alt="Hike News" src="">
+  </div>
+
+  <div id="header-blur" class="site-header-image blur" style="position: absolute; top:0; height: 207px; min-height: 207px; min-width: 100%;">
+    <img id="blurBg" width="100%" style="top: 96%" alt="Hike News" src="">
+  </div>
+
+  <script>
+        var imgUrls = "css/images/pose01.jpg,https://source.unsplash.com/collection/954550/1920x1080,https://source.unsplash.com/collection/954550/1920x1081".split(",");
+        var random = Math.floor((Math.random() * imgUrls.length ));
+        if (imgUrls[random].startsWith('http') || imgUrls[random].indexOf('://') >= 0) {
+          document.getElementById("originBg").src=imgUrls[random];
+          document.getElementById("blurBg").src=imgUrls[random];
+        } else {
+          document.getElementById("originBg").src='/' + imgUrls[random];
+          document.getElementById("blurBg").src='/' + imgUrls[random];
+        }
+    </script>
+
+
+
+
+<header id="allheader" class="site-header" role="banner" 
+   style="width: 100%; position: absolute; top:0; background: rgba(255,255,255,.8);"  >
+  <div class="clearfix container">
+      <div class="site-branding">
+
+          <h1 class="site-title">
+            
+              <a href="/" title="ME!ME!ME!" rel="home"> ME!ME!ME! </a>
+            
+          </h1>
+          
+          
+            
+          <nav id="main-navigation" class="main-navigation" role="navigation">
+            <a class="nav-open">Menu</a>
+            <a class="nav-close">Close</a>
+
+            <div class="clearfix sf-menu">
+              <ul id="main-nav" class="menu sf-js-enabled sf-arrows"  style="touch-action: pan-y;">
+                    
+                      <li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-home menu-item-1663" linktext="/"> <a class="" href="/">首页</a> </li>
+                    
+                      <li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-home menu-item-1663" linktext="archives"> <a class="" href="/archives">归档</a> </li>
+                    
+                      <li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-home menu-item-1663" linktext="categories"> <a class="" href="/categories">分类</a> </li>
+                    
+                      <li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-home menu-item-1663" linktext="tags"> <a class="" href="/tags">标签</a> </li>
+                    
+                      <li class="menu-item menu-item-type-custom menu-item-object-custom menu-item-home menu-item-1663" linktext="about"> <a class="" href="/about">关于</a> </li>
+                    
+              </ul>
+            </div>
+          </nav>
+
+      </div>
+  </div>
+</header>
+
+
+  <div id="container">
+    <div id="wrap">
+            
+      <div id="content" class="outer">
+        
+          <section id="main" style="float:none;"><article id="post-ebook-server" style="width: 66%; float:left;" class="article article-type-post" itemscope itemprop="blogPost" >
+  <div id="articleInner" class="clearfix post-1016 post type-post status-publish format-standard has-post-thumbnail hentry category-template-2 category-uncategorized tag-codex tag-edge-case tag-featured-image tag-image tag-template">
+    
+<div class="article-gallery">
+  <div class="article-gallery-photos">
+    
+      <a class="article-gallery-img fancybox" href="/../img/ebook-server/cover.png" rel="gallery_cm07iq9yt0004agv68v5m1gig">
+        <img src="/../img/ebook-server/cover.png" itemprop="image">
+      </a>
+    
+  </div>
+</div>
+
+    
+      <header class="article-header">
+        
+  
+    <h1 class="thumb" class="article-title" itemprop="name">
+      openwrt+docker+calibre:搭建家庭电子书库服务器
+    </h1>
+  
+
+      </header>
+    
+    <div class="article-meta">
+      
+	<a href="/2023/02/01/ebook-server/" class="article-date">
+	  <time datetime="2023-02-01T09:22:03.472Z" itemprop="datePublished">二月 1, 2023</time>
+	</a>
+
+       
+      
+	<span id="busuanzi_container_page_pv">
+	  本文总阅读量<span id="busuanzi_value_page_pv"></span>次
+	</span>
+
+    </div>
+    <div class="article-entry" itemprop="articleBody">
+      
+        <p>前些天发现家里的软路由R2S里面openwrt系统里面预装了一个docker，于是突发奇想：能不能用R2S里面多余的存储空间搭建一个Calibre-web用来实现家庭内部的电子书数据库？说干就干，跟着网上的资料，经过两个小时的鏖战，最后我这个完全没接触过docker的纯菜鸟终于也完成这个应用的搭建。<span id="more"></span></p>
+<p><strong>Calibre-web是什么：</strong></p>
+<p>Calibre电子书管理解决方案，本地版使用了很多年，发现可以突破本地服务的局限，为自己的各种终端提供电子书服务。<br>Calibre-web就是calibre的web版，它提供了用户友好的对外网页展示的形式，可以在网上展示，管理，浏览自己的书籍，让书跟着自己走。</p>
+<p>参考资料：</p>
+<ul>
+<li>[为openwrt里的docker扩容教程 - 腾讯云开发者社区-腾讯云 (tencent.com)](<a target="_blank" rel="noopener" href="https://cloud.tencent.com/developer/article/1956624#:~:text=OpenWrt">https://cloud.tencent.com/developer/article/1956624#:~:text=OpenWrt</a> 扩容磁盘方案及实操 我们安装,OpenWrt 之后默认的存储空间都很小，如果你是通过下载其他大佬的固件，一般磁盘大小在编译固件的时候大小就固定死了，如果要跑 docker 的话会连)</li>
+<li><a target="_blank" rel="noopener" href="https://www.right.com.cn/forum/thread-4029912-1-1.html">小白试着用2个步骤在openwrt中docker部署”个人电子图书馆”-斐讯无线路由器以及其它斐迅网络设备-恩山无线论坛 (right.com.cn)</a></li>
+<li><a target="_blank" rel="noopener" href="https://www.bilibili.com/video/BV11G4y1t7sj/?spm_id_from=333.1007.top_right_bar_window_history.content.click&vd_source=30c3a74835813dce01b41efe8f676cc7">【好玩儿的Docker项目】15分钟搭建一个在线电子书库&#x2F;漫画&#x2F;CG&#x2F;画集库——Calibre-Web_哔哩哔哩_bilibili</a></li>
+<li><a target="_blank" rel="noopener" href="https://blog.laoda.de/archives/docker-compose-install-calibre-web">【好玩儿的Docker项目】15分钟搭建一个在线电子书库&#x2F;漫画&#x2F;CG&#x2F;画集库——Calibre-Web (laoda.de)</a></li>
+</ul>
+<p><img src="/../img/ebook-server/01.png" alt="image-20230126191343910"></p>
+<h2 id="第零步：docker的扩容"><a href="#第零步：docker的扩容" class="headerlink" title="第零步：docker的扩容"></a>第零步：docker的扩容</h2><h3 id="1-创建新分区"><a href="#1-创建新分区" class="headerlink" title="1. 创建新分区"></a>1. 创建新分区</h3><p>我当初购买的内置存储器是一块16GB的内存卡，对于只需要不到2GB的openwrt操作系统来说，实在有点大材小用了。因此当初我为内存卡分了一个12GB的空间用来作为网路共享存储器放着我珍贵的高清典藏无广告版《Yes，Prime minister》。随着三刷的结束，这12GB的空间终于被我释放用作docker的扩容。（当然如果使用外接设备比如说U盘也可以）</p>
+<p>openwrt的默认docker容量只有不到一个1GB，这对于我们后续安装docker应用显然是不够的，因此第零步是对docker进行扩容。<strong>在这里我使用的远程登录软件是FinalShell。</strong><a target="_blank" rel="noopener" href="http://www.hostbuf.com/downloads/finalshell_install.exe">windows版FinalShell下载</a>     <a target="_blank" rel="noopener" href="http://www.hostbuf.com/downloads/finalshell_install.pkg">max版</a></p>
+<p>话不多说，我们先用finalshell远程登录一下我们的openwrt检查我们的存储情况：</p>
+<ul>
+<li>点击左上角的图标按钮进入连接管理器 -&gt; 点击左上角的白色文件夹添加 -&gt; 选择SSH连接 -&gt; 输入账号密码，点击确认 -&gt; 进入远程页面</li>
+</ul>
+<p><img src="/../img/ebook-server/02.png" alt="新建连接"></p>
+<p><img src="/../img/ebook-server/03.png" alt="连接成功"></p>
+<p>输入查看当前磁盘分区：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">fdisk -l</span><br></pre></td></tr></table></figure>
+
+<p><img src="/../img/ebook-server/04.png"></p>
+<p>linux系统没有windows里C盘D盘的概念，我们内存卡名称是mmcblk0，在这里我们内存卡下的第一个分区是mmcblk0p1，mmcblk0p2就是第二个分区，mmcblk0p3是我后期使用磁盘剩余空间建立的分区。</p>
+<p>分区的规划我们同样可以在Openwrt系统内看到。点击“系统” –&gt;“磁盘管理”：</p>
+<p><img src="/../img/ebook-server/05.png"></p>
+<p>在这里我先将删掉mmcblk0p3，然后演示如何创建分区mmcblk0p3。</p>
+<p>现在我们开始对内存卡进行分区，输入分区命令：</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">fdisk /dev/mmcblk0</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>然后输入m可以查看有哪些操作：</li>
+</ul>
+<p><img src="/../img/ebook-server/06.png"></p>
+<ul>
+<li>输入n新建分区</li>
+</ul>
+<p><img src="/../img/ebook-server/07.png"></p>
+<ul>
+<li><p>输入p建立分区</p>
+</li>
+<li><p>partiton number: 输入defalt值就行，表示建立一个分区</p>
+</li>
+<li><p>First sector: 系统提示选择分区的起始扇区。</p>
+<p>在这里使用内存作为分区的朋友要小心了，系统默认起始位置是第一块没有被挂载的分区，但是这块分区可能并不是我们希望的。就像我们之前检查的结果一样，分区1和分区2之间存在一块很小的空闲分区，如果我们此时选择敲回车默认，就会选中那块小分区，所以我们选择填入的数字应该比最后一块已经挂载的分区（mmcblk0p2）的end值要大，在这里我填的是2200000：</p>
+<p><img src="/../img/ebook-server/08.png" alt="填入的数字应该比最后一块已经挂载的分区（mmcblk0p2）的end值要大"></p>
+</li>
+</ul>
+<p><img src="/../img/ebook-server/09.png" alt="mmcblk0p1和mmcblk0p2之间存在16MB的小空闲分区"></p>
+<ul>
+<li><p>Last sector：敲回车默认就行，也可以选择分区大小，前提是大小要合适，否则报错</p>
+</li>
+<li><p>最后输入y确认分区参数，输入n是放弃</p>
+</li>
+<li><p>最后输入w写入分区表</p>
+</li>
+<li><p>输入fdisk -l查看新的磁盘信息</p>
+<p><img src="/../img/ebook-server/04.png"></p>
+</li>
+<li><p>输入reboot重启系统同步磁盘信息</p>
+</li>
+<li><p>重启成功后输入，格式化mmcblk0p3</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">mkfs.ext4 /dev/mmcblk0p3</span><br></pre></td></tr></table></figure></li>
+</ul>
+<p>这样我们就拥有了一个分区。</p>
+<blockquote>
+<p>总结：<br>创建新分区 &#x2F;dev&#x2F;mmcblk0p3</p>
+</blockquote>
+<h3 id="2-将分区挂载在docker下"><a href="#2-将分区挂载在docker下" class="headerlink" title="2. 将分区挂载在docker下"></a>2. 将分区挂载在docker下</h3><p>打开openwrt，在“系统” - &gt; “挂载点” -&gt; 点击添加</p>
+<p><img src="/../img/ebook-server/10.png" alt="挂载点目录下点击添加"></p>
+<p><img src="https://ask.qcloudimg.com/http-save/9147629/3c7f0f6039f37d64142976752c511edd.png?imageView2/2/w/1620" alt="如果没有“作为docker数据分区使用”，就在自定义下填入“/opt”，点击保存并应用"></p>
+<p>重启系统即可，此时我们docker有10.84GB可用</p>
+<p><img src="/../img/ebook-server/11.png"></p>
+<blockquote>
+<p>总结：<br>新分区：&#x2F;dev&#x2F;mmcblk0p3<br>docker分区：&#x2F;opt&#x2F;docker&#x2F;</p>
+</blockquote>
+<h2 id="第一步：安装calibre-web"><a href="#第一步：安装calibre-web" class="headerlink" title="第一步：安装calibre-web"></a>第一步：安装calibre-web</h2><ul>
+<li><p>用SSH工具登陆openwrt，在外接硬盘上新建calibre文件夹，并在此文件夹内新建“config”、“books”两个文件夹。在这里我们的docker分区是&#x2F;opt&#x2F;docker&#x2F;</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br></pre></td><td class="code"><pre><span class="line">mkdir /opt/docker/calibre</span><br><span class="line">mkdir /opt/docker/calibre/config</span><br><span class="line">mkdir /opt/docker/calibre/books</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>安装linuxserver&#x2F;calibre-web（电子图书馆）</strong></p>
+<ul>
+<li>在docker -&gt; 镜像 -&gt; 拉取镜像 中输入以下内容，点击拉取：</li>
+</ul>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">linuxserver/calibre-web</span><br></pre></td></tr></table></figure>
+
+<p><img src="/../img/ebook-server/12.png" alt="拉取镜像"></p>
+<ul>
+<li><p>在docker -&gt; 容器 -&gt; 点击添加  -&gt;  选择命令行 -&gt; 输入如下内容，然后点击确定即可</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line">docker run \</span><br><span class="line">  --name calibre-web \</span><br><span class="line">  --restart unless-stopped \</span><br><span class="line">  -e PUID=1000 \</span><br><span class="line">  -e PGID=1000 \</span><br><span class="line">  -e TZ=Asia/Shanghai \</span><br><span class="line">  -v /opt/docker/calibre/config:/config \</span><br><span class="line">  -v /opt/docker/calibre/books:/books \</span><br><span class="line">  -p 8083:8083 \</span><br><span class="line">  -d linuxserver/calibre-web</span><br></pre></td></tr></table></figure>
+
+<table>
+<thead>
+<tr>
+<th><code>-p 8083</code></th>
+<th>网页用户界面</th>
+</tr>
+</thead>
+<tbody><tr>
+<td><code>-e PUID=1000</code></td>
+<td>对于用户 ID - 有关说明，请参阅下文</td>
+</tr>
+<tr>
+<td><code>-e PGID=1000</code></td>
+<td>对于组 ID - 有关说明，请参阅下文</td>
+</tr>
+<tr>
+<td><code>-e TZ=Asia/Shanghai</code></td>
+<td>指定使用 上海的时区。</td>
+</tr>
+<tr>
+<td><code>-e DOCKER_MODS=linuxserver/mods:universal-calibre</code></td>
+<td>仅#optional和<strong>x86-64</strong> 添加执行电子书转换的功能</td>
+</tr>
+<tr>
+<td><code>-e OAUTHLIB_RELAX_TOKEN_SCOPE=1</code></td>
+<td>（可选）设置此选项以允许 Google OAUTH 工作</td>
+</tr>
+<tr>
+<td><code>-v /config</code></td>
+<td>calibre-web 存储内部数据库和配置的位置。</td>
+</tr>
+<tr>
+<td><code>-v /books</code></td>
+<td>您先前存在的口径数据库所在的位置。</td>
+</tr>
+</tbody></table>
+<p><em>*<em><strong>：</strong>PUID和PGID的内容，只需要cd &#x2F;opt&#x2F;docker&#x2F;calibre，然后输入id即可查到</em>*</em>*</p>
+</li>
+<li><p>添加日志文件</p>
+<p>将这个文件（<a target="_blank" rel="noopener" href="https://www.right.com.cn/forum/forum.php?mod=attachment&aid=Mzg3NTI5fGI3NTdjYTQxfDE2NzUxNTI2ODl8MHw0MDI5OTEy">metadata.db</a>）复制到电子书存放路径下，对应我的路径就是“&#x2F;opt&#x2F;docker&#x2F;calibre&#x2F;books”，并且将其权限改为“读写”</p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br></pre></td><td class="code"><pre><span class="line">chmod 777 /opt/docker/calibre/books/metadata.db</span><br></pre></td></tr></table></figure></li>
+</ul>
+</li>
+<li><p><strong>端口放行</strong></p>
+<p>openwrt&#x3D;&#x3D;》网络&#x3D;&#x3D;》防火墙&#x3D;&#x3D;》端口转发，在外部端口填入8083&#x3D;&#x3D;》添加</p>
+<p><img src="/../img/ebook-server/15.png"></p>
+<p>这样我们就可以访问calibre-web了！</p>
+</li>
+</ul>
+<blockquote>
+<p>总结：</p>
+<p>calibre-web地址：&#x2F;opt&#x2F;docker&#x2F;calibre</p>
+<p>calibre-web存储位置：&#x2F;opt&#x2F;docker&#x2F;calibre&#x2F;books</p>
+<p>calibre-web日志位置：&#x2F;opt&#x2F;docker&#x2F;calibre&#x2F;config</p>
+<p>端口：8083</p>
+</blockquote>
+<h2 id="第二步：配置calibre-web"><a href="#第二步：配置calibre-web" class="headerlink" title="第二步：配置calibre-web"></a>第二步：配置calibre-web</h2><ul>
+<li><p><strong>配置数据库地址</strong></p>
+<p>“数据库”的路径输入“&#x2F;books”即可，然后点“登录”<img src="https://www.right.com.cn/forum/data/attachment/forum/202005/20/205451dzluoprzug8004qh.png"><strong>初次登录的用户名为：admin；密码为：admin123</strong></p>
+</li>
+<li><p><strong>更改语言</strong></p>
+<p>登录后为英文，依次点选“admin”–”language”选择“中文”并保存即可</p>
+</li>
+<li><p><strong>后台启用上传</strong></p>
+<p><img src="https://img.laoda.de/i/2022/11/11/p8ac67-2.webp"></p>
+</li>
+<li><p><strong>扩展程序配置（转换格式）</strong></p>
+<p><img src="https://img.laoda.de/i/2022/11/11/p86rlk-2.webp"></p>
+<p><img src="https://img.laoda.de/i/2022/11/11/p88jbb-2.webp"></p>
+<figure class="highlight plaintext"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br></pre></td><td class="code"><pre><span class="line">Calibre 电子书转换器路径: /usr/bin/ebook-convert</span><br><span class="line">KEpubify 电子书转换器路径: /usr/bin/kepubify</span><br></pre></td></tr></table></figure>
+</li>
+<li><p><strong>启用用户阅读权限</strong></p>
+<p><img src="https://img.laoda.de/i/2022/11/11/p8kqwo-2.webp"></p>
+<p><img src="https://img.laoda.de/i/2022/11/11/p8m4h3-2.webp"></p>
+</li>
+</ul>
+<p>各位自己慢慢摸索吧！</p>
+
+      
+    </div>
+    <footer class="entry-meta entry-footer">
+      
+      
+  <span class="ico-tags"></span>
+  <ul class="article-tag-list" itemprop="keywords"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/calibre/" rel="tag">calibre</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/docker/" rel="tag">docker</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/tags/openwrt/" rel="tag">openwrt</a></li></ul>
+
+      
+        
+	<div id="comment">
+		<!-- 来必力City版安装代码 -->
+		<div id="lv-container" data-id="city" data-uid="MTAyMC8yOTQ4MS82MDQ5">
+		<script type="text/javascript">
+		   (function(d, s) {
+		       var j, e = d.getElementsByTagName(s)[0];
+
+		       if (typeof LivereTower === 'function') { return; }
+
+		       j = d.createElement(s);
+		       j.src = 'https://cdn-city.livere.com/js/embed.dist.js';
+		       j.async = true;
+
+		       e.parentNode.insertBefore(j, e);
+		   })(document, 'script');
+		</script>
+		<noscript>为正常使用来必力评论功能请激活JavaScript</noscript>
+		</div>
+		<!-- City版安装代码已完成 -->
+	</div>
+
+
+
+      
+    </footer>
+    <hr class="entry-footer-hr">
+  </div>
+  
+    
+<nav id="article-nav">
+  
+    <a href="/2024/08/24/hello-world/" id="article-nav-newer" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">上一篇</strong>
+      <div class="article-nav-title">
+        
+          Hello World
+        
+      </div>
+    </a>
+  
+  
+    <a href="/2022/04/14/leetcode/" id="article-nav-older" class="article-nav-link-wrap">
+      <strong class="article-nav-caption">下一篇</strong>
+      <div class="article-nav-title">我的leetcode</div>
+    </a>
+  
+</nav>
+
+  
+</article>
+
+<!-- Table of Contents -->
+
+  <aside id="sidebar">
+    <div id="toc" class="toc-article">
+    <strong class="toc-title">文章目录</strong>
+    
+      <ol class="nav"><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E9%9B%B6%E6%AD%A5%EF%BC%9Adocker%E7%9A%84%E6%89%A9%E5%AE%B9"><span class="nav-number">1.</span> <span class="nav-text">第零步：docker的扩容</span></a><ol class="nav-child"><li class="nav-item nav-level-3"><a class="nav-link" href="#1-%E5%88%9B%E5%BB%BA%E6%96%B0%E5%88%86%E5%8C%BA"><span class="nav-number">1.1.</span> <span class="nav-text">1. 创建新分区</span></a></li><li class="nav-item nav-level-3"><a class="nav-link" href="#2-%E5%B0%86%E5%88%86%E5%8C%BA%E6%8C%82%E8%BD%BD%E5%9C%A8docker%E4%B8%8B"><span class="nav-number">1.2.</span> <span class="nav-text">2. 将分区挂载在docker下</span></a></li></ol></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E4%B8%80%E6%AD%A5%EF%BC%9A%E5%AE%89%E8%A3%85calibre-web"><span class="nav-number">2.</span> <span class="nav-text">第一步：安装calibre-web</span></a></li><li class="nav-item nav-level-2"><a class="nav-link" href="#%E7%AC%AC%E4%BA%8C%E6%AD%A5%EF%BC%9A%E9%85%8D%E7%BD%AEcalibre-web"><span class="nav-number">3.</span> <span class="nav-text">第二步：配置calibre-web</span></a></li></ol>
+    
+    </div>
+  </aside>
+</section>
+        
+      </div>
+
+    </div>
+    <!-- <nav id="mobile-nav">
+  
+    <a href="/" class="mobile-nav-link">Home</a>
+  
+    <a href="/archives" class="mobile-nav-link">Archives</a>
+  
+    <a href="/categories" class="mobile-nav-link">Categories</a>
+  
+    <a href="/tags" class="mobile-nav-link">Tags</a>
+  
+    <a href="/about" class="mobile-nav-link">About</a>
+  
+</nav> -->
+    <footer id="footer" class="site-footer">
+  
+
+  <div class="clearfix container">
+      <div class="site-info">
+	      &copy; 2024 ME!ME!ME! All Rights Reserved.
+        
+            <span id="busuanzi_container_site_uv">
+              本站访客数<span id="busuanzi_value_site_uv"></span>人次  
+              本站总访问量<span id="busuanzi_value_site_pv"></span>次
+            </span>
+          
+      </div>
+      <div class="site-credit">
+        Theme by <a href="https://github.com/iTimeTraveler/hexo-theme-hipaper" target="_blank">hipaper</a>
+      </div>
+  </div>
+</footer>
+
+
+<!-- min height -->
+
+<script>
+    var wrapdiv = document.getElementById("wrap");
+    var contentdiv = document.getElementById("content");
+
+    wrapdiv.style.minHeight = document.body.offsetHeight - document.getElementById("allheader").offsetHeight - document.getElementById("footer").offsetHeight + "px";
+    contentdiv.style.minHeight = document.body.offsetHeight - document.getElementById("allheader").offsetHeight - document.getElementById("footer").offsetHeight + "px";
+
+
+    <!-- headerblur min height -->
+    
+      var headerblur = document.getElementById("header-blur");
+      headerblur.style.minHeight = window.getComputedStyle(document.getElementById("allheader"), null).height;
+    
+    
+</script>
+    
+<div style="display: none;">
+  <script src="https://s11.cnzz.com/z_stat.php?id=1260716016&web_id=1260716016" language="JavaScript"></script>
+</div>
+
+<!-- mathjax config similar to math.stackexchange -->
+
+<script type="text/x-mathjax-config">
+  MathJax.Hub.Config({
+    tex2jax: {
+      inlineMath: [ ['$','$'], ["\\(","\\)"] ],
+      processEscapes: true
+    }
+  });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Config({
+      tex2jax: {
+        skipTags: ['script', 'noscript', 'style', 'textarea', 'pre', 'code']
+      }
+    });
+</script>
+
+<script type="text/x-mathjax-config">
+    MathJax.Hub.Queue(function() {
+        var all = MathJax.Hub.getAllJax(), i;
+        for(i=0; i < all.length; i += 1) {
+            all[i].SourceElement().parentNode.className += ' has-jax';
+        }
+    });
+</script>
+
+<script type="text/javascript" src="https://cdn.mathjax.org/mathjax/latest/MathJax.js?config=TeX-AMS-MML_HTMLorMML">
+</script>
+
+
+  
+<link rel="stylesheet" href="/fancybox/jquery.fancybox.css">
+
+  
+<script src="/fancybox/jquery.fancybox.pack.js"></script>
+
+
+
+
+<script src="/js/script.js"></script>
+
+
+<script src="/js/bootstrap.js"></script>
+
+
+<script src="/js/main.js"></script>
+
+
+
+
+
+
+
+
+  <div style="display: none;">
+    <script src="https://s95.cnzz.com/z_stat.php?id=1260716016&web_id=1260716016" language="JavaScript"></script>
+  </div>
+
+
+
+	<script async src="//dn-lbstatics.qbox.me/busuanzi/2.3/busuanzi.pure.mini.js">
+	</script>
+
+
+
+
+
+
+  </div>
+
+  <a id="rocket" href="#top" class=""></a>
+  <script type="text/javascript" src="/js/totop.js" async=""></script>
+</body>
+</html>
